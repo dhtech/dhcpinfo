@@ -1,0 +1,10 @@
+<form class="search" action="{{ url_for('index') }}" method="get" role="search">
+  <label for="q">Address, network, hardware address or host name</label>
+  <div class="row">
+    <input id="q" name="q" type="search" value="{{ typed }}" maxlength="100" autocomplete="off"
+           autocapitalize="none" spellcheck="false" placeholder="192.0.2.57 · 00:00:5e:00:53:01 · laptop"{% if not typed %} autofocus{% endif %}>
+    <button type="submit">Search</button>
+  </div>
+  <label class="check"><input type="checkbox" name="history" value="1"{% if history %} checked{% endif %}>
+    Also show leases that are over</label>
+</form>

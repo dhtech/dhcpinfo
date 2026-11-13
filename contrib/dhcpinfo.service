@@ -1,0 +1,24 @@
+# An example unit: gunicorn on the loopback address, a reverse proxy in
+# front. Put the connection string in /etc/dhcpinfo.env as
+#   DHCPINFO_DSN=host=db.example.net dbname=dhcp user=dhcp_read sslmode=verify-full ...
+# readable by the service only.
+[Unit]
+Description=dhcpinfo - search the DHCP lease history
+Documentation=https://github.com/dhtech/dhcpinfo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/dhcpinfo.env
+Environment=DHCPINFO_TIMEZONE=Europe/Stockholm
+ExecStart=/usr/bin/gunicorn --bind 127.0.0.1:8000 --workers 2 --access-logfile - dhcpinfo.wsgi:app
+Restart=always
+RestartSec=5
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

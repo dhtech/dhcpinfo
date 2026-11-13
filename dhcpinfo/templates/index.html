@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{% if query %}{{ query.text }} - {% endif %}{{ title }}{% endblock %}
+{% block main %}
+{% include "_search.html" %}
+{% if problem %}
+<p class="notice problem" role="alert">{{ problem }}</p>
+{% elif query %}
+<h1>{{ rows|length }}{% if truncated %}+{% endif %} lease{{ '' if rows|length == 1 else 's' }}
+  for {{ query.label }} <span class="value">{{ query.value }}</span></h1>
+{% if truncated %}
+<p class="notice">Only the first {{ limit }} are shown. Narrow the search to see the rest.</p>
+{% endif %}
+{% if not rows %}
+<p class="notice">{% if history %}Nothing in the history.{% else %}Nobody holds a lease that matches right now.
+  <a href="{{ url_for('index', q=query.text, history=1) }}">Look in the history too</a>.{% endif %}</p>
+{% else %}
+<div class="scroll">
+<table>
+  <thead>
+    <tr>
+      <th scope="col">Address</th>
+      <th scope="col">Hardware address</th>
+      <th scope="col">Host name</th>
+      <th scope="col">Network</th>
+      <th scope="col">Switch</th>
+      <th scope="col">Port</th>
+      <th scope="col">Since</th>
+      <th scope="col">Renewed</th>
+      <th scope="col">Ends</th>
+      <th scope="col">State</th>
+    </tr>
+  </thead>
+  <tbody>
+{% for lease in rows %}
+    <tr{% if not lease.active %} class="over"{% endif %}>
+      <td><a href="{{ url_for('index', q=lease.ip, history=1) }}">{{ lease.ip }}</a></td>
+      <td>{% if lease.mac %}<a href="{{ url_for('index', q=lease.mac, history=1) }}">{{ lease.mac }}</a>{% endif %}</td>
+      <td>{{ lease.hostname or '' }}</td>
+      <td>{% if lease.network %}<a href="{{ url_for('index', q=lease.network) }}">{{ lease.scope or lease.network }}</a>{% if lease.vlan %} <span class="dim">vlan {{ lease.vlan }}</span>{% endif %}{% endif %}</td>
+      <td>{{ lease.switch or '' }}</td>
+      <td>{{ lease.port or '' }}</td>
+      <td>{{ lease.first_seen|when }}</td>
+      <td>{{ lease.starts|when }}</td>
+      <td>{{ lease.ends|when or 'never' }}</td>
+      <td>{% if lease.active %}<span class="state now">● active</span>{% else %}<span class="state">{{ 'ended' if lease.state == 'active' else lease.state }}</span>{% endif %}</td>
+    </tr>
+{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% else %}
+{% if totals %}
+<p class="totals">Right now <strong>{{ totals.active_leases }}</strong> addresses are leased to
+  <strong>{{ totals.active_clients }}</strong> clients; <strong>{{ totals.clients_ever }}</strong> clients have been seen
+  in all.</p>
+{% endif %}
+<dl class="help">
+  <dt>An address</dt><dd><code>192.0.2.57</code> - who has it, and who had it before</dd>
+  <dt>A network</dt><dd><code>192.0.2.0/24</code> - everybody in it</dd>
+  <dt>A hardware address</dt><dd><code>00:00:5e:00:53:01</code>, <code>0000.5e00.5301</code> or <code>00-00-5E-00-53-01</code>;
+    the beginning is enough: <code>00:00:5e</code></dd>
+  <dt>A host name</dt><dd><code>laptop</code> - every name that contains it</dd>
+</dl>
+{% endif %}
+{% endblock %}

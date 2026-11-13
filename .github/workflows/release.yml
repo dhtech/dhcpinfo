@@ -1,0 +1,32 @@
+name: release
+
+# Pushing a tag vX.Y.Z publishes dhcpinfo-X.Y.Z.tar.gz (the source, ready
+# to unpack and run) and the wheel as a GitHub release, with SHA256SUMS.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: the tag is the version in the source
+        run: |
+          version=$(python -c "import dhcpinfo; print(dhcpinfo.__version__)")
+          test "v${version}" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} but dhcpinfo.__version__ is ${version}"; exit 1; }
+      - run: pip install build '.[test]' 'psycopg[binary]'
+      - run: pytest
+      - run: python -m build
+      - run: cd dist && sha256sum * > SHA256SUMS
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/* --title "${GITHUB_REF_NAME}" --generate-notes

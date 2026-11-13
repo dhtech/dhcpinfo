@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dhcpinfo"
+description = "Search the DHCP lease history that lease2db keeps in PostgreSQL"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.11"
+dynamic = ["version"]
+dependencies = [
+    "flask>=3.0",
+    "psycopg>=3.1",
+    "psycopg-pool>=3.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Source = "https://github.com/dhtech/dhcpinfo"
+
+[tool.setuptools]
+packages = ["dhcpinfo"]
+
+[tool.setuptools.package-data]
+dhcpinfo = ["templates/*.html", "static/*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "dhcpinfo.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

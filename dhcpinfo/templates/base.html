@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}{{ title }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <a class="home" href="{{ url_for('index') }}">{{ title }}</a>
+    <nav>
+      <a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} aria-current="page"{% endif %}>Search</a>
+      <a href="{{ url_for('networks') }}"{% if request.endpoint == 'networks' %} aria-current="page"{% endif %}>Networks</a>
+    </nav>
+  </header>
+  <main>
+{% block main %}{% endblock %}
+  </main>
+  <footer>
+    Times are {{ timezone }}. dhcpinfo {{ version }}.
+  </footer>
+</body>
+</html>
