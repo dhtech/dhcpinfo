@@ -29,10 +29,10 @@ footer { padding: 1rem; color: var(--dim); font-size: 0.85rem; }
 h1 { font-size: 1.15rem; font-weight: 600; margin: 1.25rem 0 0.75rem; }
 .value, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.95em; }
 .search label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
-.search .row { display: flex; gap: 0.5rem; max-width: 52rem; align-items: flex-end; }
-.search .field { flex: 0 0 7rem; min-width: 0; }
+.search .row { display: flex; gap: 0.5rem; max-width: 64rem; align-items: flex-end; }
+.search .field { flex: 0 1 16rem; min-width: 7rem; }
 .search .field.wide { flex: 1 1 auto; }
-.search input[type="search"], .search input[type="text"] {
+.search input[type="search"], .search input[type="text"], .search select {
   width: 100%; padding: 0.55rem 0.7rem; font: inherit;
   color: var(--text); background: var(--bg); border: 1px solid var(--dim); border-radius: 6px;
 }
@@ -40,7 +40,7 @@ h1 { font-size: 1.15rem; font-weight: 600; margin: 1.25rem 0 0.75rem; }
   padding: 0.55rem 1.1rem; font: inherit; font-weight: 600; cursor: pointer;
   color: var(--bg); background: var(--accent); border: 1px solid var(--accent); border-radius: 6px;
 }
-.search input:focus-visible, .search button:focus-visible, a:focus-visible {
+.search input:focus-visible, .search select:focus-visible, .search button:focus-visible, a:focus-visible {
   outline: 3px solid var(--accent); outline-offset: 2px;
 }
 .search .where { border: 0; padding: 0; margin: 0.6rem 0 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }

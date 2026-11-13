@@ -23,7 +23,9 @@ Two controls next to the box shape every search:
   *History* (current leases and those that are over).
 - **Only VLAN** narrows whatever you search for to one VLAN - a host name
   or a vendor prefix within VLAN 10, say. With the box left empty it
-  lists the whole VLAN.
+  lists the whole VLAN. It is a list of the DHCP server's VLANs with the
+  names of their networks (a plain field when the database has no
+  networks).
 
 Every result shows the address, the hardware address, the host name the
 client sent, the network and VLAN, the switch and port it sits behind

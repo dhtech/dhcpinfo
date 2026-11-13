@@ -27,6 +27,8 @@ class FakeDB:
     def __init__(self, rows=(), truncated=False, broken=False, version=2):
         self.rows, self.truncated, self.broken, self.version = list(rows), truncated, broken, version
         self.asked = []
+        self.vlan_list = [{'vlan': 10, 'names': 'OFFICE'}, {'vlan': 20, 'names': 'GUESTS, GUESTS-2'},
+                          {'vlan': 30, 'names': None}]
 
     def _check(self):
         if self.broken:
@@ -42,6 +44,10 @@ class FakeDB:
         self._check()
         return [{'network': '192.0.2.0/24', 'name': 'OFFICE', 'vlan': 10, 'gateway': '192.0.2.1',
                  'addresses': 200, 'leases': 50, 'percent_used': 25.0}]
+
+    def vlans(self):
+        self._check()
+        return self.vlan_list
 
     def totals(self):
         self._check()
@@ -108,7 +114,13 @@ def test_the_vlan_filter_alone_and_with_a_search():
     c = client(db)
     text = c.get('/?vlan=10').get_data(as_text=True)
     assert db.asked == [(None, None, False, 500, 10)]
-    assert '1 lease' in text and 'in VLAN' in text and 'name="vlan"' in text and 'value="10"' in text
+    assert '1 lease' in text and 'in VLAN' in text
+    # the VLAN is chosen from the DHCP server's own, by number and name
+    assert '<select id="vlan" name="vlan">' in text
+    assert '<option value="10" selected>10 - OFFICE</option>' in text
+    assert '<option value="20">20 - GUESTS, GUESTS-2</option>' in text
+    assert '<option value="30">30</option>' in text
+    assert '<option value="">any</option>' in text
     c.get('/?q=laptop&vlan=950&history=1')
     assert db.asked[-1] == ('name', 'laptop', True, 500, 950)
     # typed into the box, a VLAN is a search of its own
@@ -120,6 +132,22 @@ def test_the_vlan_filter_alone_and_with_a_search():
     before = len(db.asked)
     bad = c.get('/?q=laptop&vlan=banana')
     assert bad.status_code == 400 and '1 to 4094' in bad.get_data(as_text=True) and len(db.asked) == before
+
+
+def test_the_vlan_choice():
+    db = FakeDB([lease()])
+    # nothing chosen: "any" is
+    text = client(db).get('/').get_data(as_text=True)
+    assert '<option value="" selected>any</option>' in text and 'selected>10' not in text
+    # a VLAN that is in no network of the DHCP server (any more) can still
+    # be asked for, and the form shows it
+    text = client(db).get('/?vlan=777&history=1').get_data(as_text=True)
+    assert db.asked[-1] == (None, None, True, 500, 777)
+    assert '<option value="777" selected>777</option>' in text
+    # a database without the networks: a plain field instead of a list
+    db.vlan_list = []
+    text = client(db).get('/?vlan=10').get_data(as_text=True)
+    assert '<select' not in text and '<input id="vlan" name="vlan" type="text"' in text and 'value="10"' in text
 
 
 def test_nothing_found_offers_the_history():

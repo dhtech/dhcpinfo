@@ -7,8 +7,24 @@
     </div>
     <div class="field">
       <label for="vlan">Only VLAN</label>
+{% if vlans %}
+      {# the VLANs the DHCP server has networks in; one that was asked
+         for but is not among them stays selectable, so the form shows
+         what the results are for #}
+      <select id="vlan" name="vlan">
+        <option value=""{% if not typed_vlan %} selected{% endif %}>any</option>
+{% set known = vlans|map(attribute='vlan')|map('string')|list %}
+{% if typed_vlan and typed_vlan not in known %}
+        <option value="{{ typed_vlan }}" selected>{{ typed_vlan }}</option>
+{% endif %}
+{% for v in vlans %}
+        <option value="{{ v.vlan }}"{% if typed_vlan == v.vlan|string %} selected{% endif %}>{{ v.vlan }}{% if v.names %} - {{ v.names }}{% endif %}</option>
+{% endfor %}
+      </select>
+{% else %}
       <input id="vlan" name="vlan" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4"
              value="{{ typed_vlan }}" autocomplete="off" placeholder="any">
+{% endif %}
     </div>
     <button type="submit">Search</button>
   </div>

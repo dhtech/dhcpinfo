@@ -84,6 +84,10 @@ def test_vlans(db):
     assert find(db, '', vlan=999)[0] == []
 
 
+def test_the_vlans_to_choose_from(db):
+    assert db.vlans() == [{'vlan': 10, 'names': 'OFFICE'}, {'vlan': 20, 'names': 'GUESTS'}]
+
+
 def test_the_limit(db):
     rows, truncated = find(db, '00:00:5e', history=True, limit=2)
     assert len(rows) == 2 and truncated is True

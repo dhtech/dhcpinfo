@@ -92,8 +92,8 @@ def create_app(db=None, config: dict | None = None) -> Flask:
         s = run_search()
         totals = db.totals() if not s.asked and s.problem is None else None
         return render_template('index.html', s=s, history=s.history, typed=request.args.get('q', ''),
-                               typed_vlan=request.args.get('vlan', ''), totals=totals,
-                               limit=app.config['LIMIT']), (400 if s.problem else 200)
+                               typed_vlan=request.args.get('vlan', '').strip(), vlans=db.vlans(),
+                               totals=totals, limit=app.config['LIMIT']), (400 if s.problem else 200)
 
     @app.get('/networks')
     def networks():

@@ -96,6 +96,14 @@ class Database:
                    addresses, leases, percent_used
             FROM scopes_usage ORDER BY name, network""")
 
+    def vlans(self) -> list[dict]:
+        """The VLANs of the DHCP server's networks, with the names of
+        the networks in each - for the VLAN choice in the search form."""
+        return self._rows("""
+            SELECT vlan, string_agg(DISTINCT nullif(name, ''), ', ' ORDER BY nullif(name, '')) AS names
+            FROM scopes WHERE active AND vlan IS NOT NULL
+            GROUP BY vlan ORDER BY vlan""")
+
     def totals(self) -> dict:
         rows = self._rows('SELECT active_leases, active_clients, clients_ever FROM leases_totals')
         return rows[0] if rows else {}
