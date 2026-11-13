@@ -35,3 +35,23 @@ def test_what_was_typed_never_becomes_part_of_the_statement():
     assert values[0] == '%' + nasty + '%'
     # and a name's own wildcards are escaped
     assert sql_for('100%_')[1][0] == '%100\\%\\_%'
+
+
+def test_a_vlan_alone_and_a_vlan_narrowing_another_search():
+    sql, values = sql_for('vlan 10')
+    assert 'WHERE vlan = %s AND active ORDER BY' in ' '.join(sql.split())
+    assert values == (10, 501)
+    # the filter next to the box: with a search ...
+    sql, values = search_sql(query.parse('laptop'), False, 500, vlan=950)
+    assert "hostname ILIKE %s ESCAPE '\\' AND vlan = %s AND active" in ' '.join(sql.split())
+    assert values == ('%laptop%', 950, 501)
+    # ... and without one: everybody in the VLAN, history included
+    sql, values = search_sql(None, True, 500, vlan=950)
+    assert 'WHERE vlan = %s ORDER BY' in ' '.join(sql.split()) and ' active ORDER' not in sql.replace('AND active', '')
+    assert values == (950, 501)
+
+
+def test_nothing_to_search_for_is_an_error_not_everything():
+    import pytest
+    with pytest.raises(ValueError):
+        search_sql(None, True, 500)

@@ -61,25 +61,39 @@ def create_app(db=None, config: dict | None = None) -> Flask:
         response.headers.setdefault('Cache-Control', 'no-store')
         return response
 
+    class Search:
+        """What this request asks for, and what was found."""
+        query = None        # from the search box
+        vlan = None         # the VLAN filter
+        history = False
+        problem = None
+        rows: list = []
+        truncated = False
+
+        @property
+        def asked(self):
+            return self.query is not None or self.vlan is not None
+
     def run_search():
-        """(query, rows, truncated, history, problem) for this request."""
-        history = request.args.get('history') in ('1', 'on', 'true')
+        s = Search()
+        s.history = request.args.get('history') in ('1', 'on', 'true')
         try:
-            query = q.parse(request.args.get('q'))
+            s.query = q.parse(request.args.get('q'))
+            s.vlan = q.parse_vlan(request.args.get('vlan'))
         except q.Unusable as exc:
-            return None, [], False, history, str(exc)
-        if query is None:
-            return None, [], False, history, None
-        rows, truncated = db.search(query, history, app.config['LIMIT'])
-        return query, rows, truncated, history, None
+            s.query, s.vlan, s.problem = None, None, str(exc)
+            return s
+        if s.asked:
+            s.rows, s.truncated = db.search(s.query, s.history, app.config['LIMIT'], s.vlan)
+        return s
 
     @app.get('/')
     def index():
-        query, rows, truncated, history, problem = run_search()
-        totals = db.totals() if query is None and problem is None else None
-        return render_template('index.html', query=query, rows=rows, truncated=truncated, history=history,
-                               problem=problem, typed=request.args.get('q', ''), totals=totals,
-                               limit=app.config['LIMIT']), (400 if problem else 200)
+        s = run_search()
+        totals = db.totals() if not s.asked and s.problem is None else None
+        return render_template('index.html', s=s, history=s.history, typed=request.args.get('q', ''),
+                               typed_vlan=request.args.get('vlan', ''), totals=totals,
+                               limit=app.config['LIMIT']), (400 if s.problem else 200)
 
     @app.get('/networks')
     def networks():
@@ -87,13 +101,15 @@ def create_app(db=None, config: dict | None = None) -> Flask:
 
     @app.get('/api/search')
     def api_search():
-        query, rows, truncated, history, problem = run_search()
-        if problem:
-            return jsonify(error=problem), 400
-        if query is None:
-            return jsonify(error='Give a query: ?q=<address, network, hardware address or host name>'), 400
-        return jsonify(query={'kind': query.kind, 'value': query.value}, history=history,
-                       truncated=truncated, leases=[_plain(row) for row in rows])
+        s = run_search()
+        if s.problem:
+            return jsonify(error=s.problem), 400
+        if not s.asked:
+            return jsonify(error='Give a query: ?q=<address, network, hardware address, host name or '
+                                 '"vlan N"> and/or ?vlan=<number>'), 400
+        return jsonify(query={'kind': s.query.kind, 'value': s.query.value} if s.query else None,
+                       vlan=s.vlan, history=s.history, truncated=s.truncated,
+                       leases=[_plain(row) for row in s.rows])
 
     @app.get('/api/networks')
     def api_networks():

@@ -1,10 +1,22 @@
 <form class="search" action="{{ url_for('index') }}" method="get" role="search">
-  <label for="q">Address, network, hardware address or host name</label>
   <div class="row">
-    <input id="q" name="q" type="search" value="{{ typed }}" maxlength="100" autocomplete="off"
-           autocapitalize="none" spellcheck="false" placeholder="192.0.2.57 · 00:00:5e:00:53:01 · laptop"{% if not typed %} autofocus{% endif %}>
+    <div class="field wide">
+      <label for="q">Address, network, hardware address or host name</label>
+      <input id="q" name="q" type="search" value="{{ typed }}" maxlength="100" autocomplete="off"
+             autocapitalize="none" spellcheck="false" placeholder="192.0.2.57 · 00:00:5e:00:53:01 · laptop"{% if not typed and not typed_vlan %} autofocus{% endif %}>
+    </div>
+    <div class="field">
+      <label for="vlan">Only VLAN</label>
+      <input id="vlan" name="vlan" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+             value="{{ typed_vlan }}" autocomplete="off" placeholder="any">
+    </div>
     <button type="submit">Search</button>
   </div>
-  <label class="check"><input type="checkbox" name="history" value="1"{% if history %} checked{% endif %}>
-    Also show leases that are over</label>
+  <fieldset class="where">
+    <legend>Search in</legend>
+    <label><input type="radio" name="history" value="0"{% if not history %} checked{% endif %}>
+      Current leases</label>
+    <label><input type="radio" name="history" value="1"{% if history %} checked{% endif %}>
+      History <span class="dim">(current leases and those that are over)</span></label>
+  </fieldset>
 </form>

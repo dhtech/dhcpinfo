@@ -5,8 +5,8 @@ address?** It searches the DHCP lease history that
 [lease2db](https://github.com/dhtech/lease2db) keeps in PostgreSQL from an
 ISC dhcpd lease file.
 
-Type an address, a network, a hardware address or part of a host name
-into one box:
+Type an address, a network, a hardware address, a VLAN or part of a host
+name into one box:
 
 | You type | You get |
 |---|---|
@@ -15,6 +15,15 @@ into one box:
 | `00:00:5e:00:53:01`, `0000.5e00.5301`, `00-00-5E-00-53-01` | the addresses this client holds or held |
 | `00:00:5e` | every client whose hardware address starts like that (a vendor) |
 | `laptop` | every host name that contains it |
+| `vlan 10` | everybody in that VLAN |
+
+Two controls next to the box shape every search:
+
+- **Search in** *Current leases* (the default: who has it right now) or
+  *History* (current leases and those that are over).
+- **Only VLAN** narrows whatever you search for to one VLAN - a host name
+  or a vendor prefix within VLAN 10, say. With the box left empty it
+  lists the whole VLAN.
 
 Every result shows the address, the hardware address, the host name the
 client sent, the network and VLAN, the switch and port it sits behind
@@ -83,6 +92,8 @@ The same searches answer in JSON:
 ```
 GET /api/search?q=192.0.2.57            who has it now
 GET /api/search?q=192.0.2.57&history=1  and who had it
+GET /api/search?q=laptop&vlan=10         narrowed to a VLAN
+GET /api/search?vlan=10                  everybody in a VLAN
 GET /api/networks                        the networks and their usage
 GET /healthz                             200 "ok" when the database answers
 ```
@@ -90,6 +101,7 @@ GET /healthz                             200 "ok" when the database answers
 ```json
 {
   "query": {"kind": "ip", "value": "192.0.2.57"},
+  "vlan": null,
   "history": false,
   "truncated": false,
   "leases": [{
@@ -102,7 +114,8 @@ GET /healthz                             200 "ok" when the database answers
 }
 ```
 
-`kind` is one of `ip`, `net`, `mac`, `mac_prefix`, `name`. Times in JSON
+`kind` is one of `ip`, `net`, `mac`, `mac_prefix`, `name`, `vlan`; `query`
+is null when only `vlan=` was given. Times in JSON
 are UTC. `switch` and `port` are the relay's remote id and circuit id: as
 text when the relay sent text, otherwise as hex (`00:04:00:64:01:0c`) -
 decoding a vendor's packed format is up to the caller.
@@ -115,6 +128,9 @@ A page address is a search too, so other tools can link straight to one:
 - "Now" means: dhcpd's latest word about the address is an active lease
   that has not run out. A lease that ran out without dhcpd noting it shows
   as *ended*.
+- A lease has a VLAN when its address lies in one of the DHCP server's
+  networks and lease2db knows that network's VLAN number (see lease2db's
+  `-scopes`).
 - A client with a fixed address (`fixed-address` in dhcpd's configuration)
   never appears: dhcpd does not write those to its lease file.
 - The history is as long as you let lease2db keep it.

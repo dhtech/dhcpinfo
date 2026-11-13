@@ -23,7 +23,7 @@
     <tr>
       <td><a href="{{ url_for('index', q=net.network) }}">{{ net.network }}</a></td>
       <td>{{ net.name }}</td>
-      <td class="num">{{ net.vlan or '' }}</td>
+      <td class="num">{% if net.vlan %}<a href="{{ url_for('index', vlan=net.vlan) }}">{{ net.vlan }}</a>{% endif %}</td>
       <td>{{ net.gateway or '' }}</td>
       <td class="num">{{ net.leases }}</td>
       <td class="num">{{ net.addresses }}</td>

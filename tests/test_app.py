@@ -32,9 +32,10 @@ class FakeDB:
         if self.broken:
             raise RuntimeError('connection refused')
 
-    def search(self, query, history, limit):
+    def search(self, query, history, limit, vlan=None):
         self._check()
-        self.asked.append((query.kind, query.value, history, limit))
+        asked = (query.kind, query.value, history, limit) if query else (None, None, history, limit)
+        self.asked.append(asked + ((vlan,) if vlan is not None else ()))
         return self.rows, self.truncated
 
     def networks(self):
@@ -89,7 +90,36 @@ def test_history_and_what_a_finished_lease_looks_like():
     assert 'ended' in text            # superseded: dhcpd never said more than "active"
     assert 'never' in text            # no end time
     assert '● active' not in text
+    # the form remembers where the search was made
     assert 'name="history" value="1" checked' in text
+    assert 'name="history" value="0" checked' not in text
+
+
+def test_current_leases_is_the_default_place_to_search():
+    db = FakeDB([lease()])
+    text = client(db).get('/?q=laptop&history=0').get_data(as_text=True)
+    assert db.asked == [('name', 'laptop', False, 500)]
+    assert 'name="history" value="0" checked' in text
+    assert 'Current leases' in text and 'History' in text
+
+
+def test_the_vlan_filter_alone_and_with_a_search():
+    db = FakeDB([lease()])
+    c = client(db)
+    text = c.get('/?vlan=10').get_data(as_text=True)
+    assert db.asked == [(None, None, False, 500, 10)]
+    assert '1 lease' in text and 'in VLAN' in text and 'name="vlan"' in text and 'value="10"' in text
+    c.get('/?q=laptop&vlan=950&history=1')
+    assert db.asked[-1] == ('name', 'laptop', True, 500, 950)
+    # typed into the box, a VLAN is a search of its own
+    c.get('/?q=vlan+10')
+    assert db.asked[-1] == ('vlan', '10', False, 500)
+    # the lease's VLAN leads to everybody in it
+    assert 'href="/?vlan=10"' in text
+    # a VLAN that is none is explained, and nothing is asked
+    before = len(db.asked)
+    bad = c.get('/?q=laptop&vlan=banana')
+    assert bad.status_code == 400 and '1 to 4094' in bad.get_data(as_text=True) and len(db.asked) == before
 
 
 def test_nothing_found_offers_the_history():
@@ -119,13 +149,17 @@ def test_networks_page():
     text = client(FakeDB()).get('/networks').get_data(as_text=True)
     assert '1 network' in text and 'OFFICE' in text and '25 %' in text
     assert 'href="/?q=192.0.2.0/24"' in text
+    assert 'href="/?vlan=10"' in text
 
 
 def test_the_api_answers_in_json_with_utc_times():
     db = FakeDB([lease()])
     data = client(db).get('/api/search?q=0000.5e00.5301&history=1').get_json()
     assert data['query'] == {'kind': 'mac', 'value': '00:00:5e:00:53:01'}
-    assert data['history'] is True and data['truncated'] is False
+    assert data['history'] is True and data['truncated'] is False and data['vlan'] is None
+    only_vlan = client(db).get('/api/search?vlan=10').get_json()
+    assert only_vlan['query'] is None and only_vlan['vlan'] == 10 and len(only_vlan['leases']) == 1
+    assert client(db).get('/api/search?vlan=99999').status_code == 400
     assert data['leases'][0]['first_seen'] == '2026-01-10T11:00:00Z'
     assert data['leases'][0]['port'] == 'ge-0/0/7.0:office'
     assert client(db).get('/api/search').status_code == 400

@@ -29,9 +29,11 @@ footer { padding: 1rem; color: var(--dim); font-size: 0.85rem; }
 h1 { font-size: 1.15rem; font-weight: 600; margin: 1.25rem 0 0.75rem; }
 .value, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.95em; }
 .search label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
-.search .row { display: flex; gap: 0.5rem; max-width: 44rem; }
-.search input[type="search"] {
-  flex: 1; min-width: 0; padding: 0.55rem 0.7rem; font: inherit;
+.search .row { display: flex; gap: 0.5rem; max-width: 52rem; align-items: flex-end; }
+.search .field { flex: 0 0 7rem; min-width: 0; }
+.search .field.wide { flex: 1 1 auto; }
+.search input[type="search"], .search input[type="text"] {
+  width: 100%; padding: 0.55rem 0.7rem; font: inherit;
   color: var(--text); background: var(--bg); border: 1px solid var(--dim); border-radius: 6px;
 }
 .search button {
@@ -41,7 +43,9 @@ h1 { font-size: 1.15rem; font-weight: 600; margin: 1.25rem 0 0.75rem; }
 .search input:focus-visible, .search button:focus-visible, a:focus-visible {
   outline: 3px solid var(--accent); outline-offset: 2px;
 }
-.search .check { font-weight: 400; margin-top: 0.5rem; }
+.search .where { border: 0; padding: 0; margin: 0.6rem 0 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
+.search .where legend { float: left; padding: 0; margin-right: 1.25rem; font-weight: 600; }
+.search .where label { display: inline; font-weight: 400; margin: 0; }
 .notice { padding: 0.6rem 0.8rem; background: var(--panel); border-radius: 6px; max-width: 44rem; }
 .problem { color: var(--problem); background: var(--problem-bg); }
 .totals { color: var(--dim); }
@@ -63,5 +67,6 @@ tr.over a { color: inherit; }
 .state.now { color: var(--now); font-weight: 600; }
 @media (max-width: 40rem) {
   .help { grid-template-columns: 1fr; }
-  .search .row { flex-direction: column; }
+  .search .row { flex-direction: column; align-items: stretch; }
+  .search .field { flex: 1 1 auto; }
 }

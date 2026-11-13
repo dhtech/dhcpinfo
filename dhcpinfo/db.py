@@ -26,23 +26,36 @@ _WHERE = {
     q.MAC: 'mac = %s::macaddr',
     q.MAC_PREFIX: 'mac::text LIKE %s',
     q.NAME: "hostname ILIKE %s ESCAPE '\\'",
+    q.VLAN: 'vlan = %s',
 }
 
 
-def search_sql(query: q.Query, history: bool, limit: int) -> tuple[str, tuple]:
-    """The statement and its values for QUERY. One row more than LIMIT
-    is asked for, so the caller can tell that there was more."""
-    value = query.value
-    if query.kind == q.MAC_PREFIX:
-        value = value + '%'
-    elif query.kind == q.NAME:
-        value = q.like_pattern(value)
-    sql = _SELECT + _WHERE[query.kind]
+def search_sql(query: q.Query | None, history: bool, limit: int, vlan: int | None = None) -> tuple[str, tuple]:
+    """The statement and its values for QUERY, narrowed to VLAN when
+    one is given (QUERY may then be None: everybody in the VLAN). One
+    row more than LIMIT is asked for, so the caller can tell that there
+    was more."""
+    conditions, values = [], []
+    if query is not None:
+        value: object = query.value
+        if query.kind == q.MAC_PREFIX:
+            value = query.value + '%'
+        elif query.kind == q.NAME:
+            value = q.like_pattern(query.value)
+        elif query.kind == q.VLAN:
+            value = int(query.value)
+        conditions.append(_WHERE[query.kind])
+        values.append(value)
+    if vlan is not None:
+        conditions.append(_WHERE[q.VLAN])
+        values.append(vlan)
+    if not conditions:
+        raise ValueError('nothing to search for')
     if not history:
-        sql += ' AND active'
+        conditions.append('active')
     # who has it now first, then the latest
-    sql += ' ORDER BY active DESC, starts DESC, ip LIMIT %s'
-    return sql, (value, limit + 1)
+    sql = _SELECT + ' AND '.join(conditions) + ' ORDER BY active DESC, starts DESC, ip LIMIT %s'
+    return sql, tuple(values) + (limit + 1,)
 
 
 class Database:
@@ -70,9 +83,10 @@ class Database:
         with self.pool.connection() as conn:
             return conn.execute(sql, values).fetchall()
 
-    def search(self, query: q.Query, history: bool, limit: int) -> tuple[list[dict], bool]:
-        """(rows, truncated): at most LIMIT leases for QUERY."""
-        sql, values = search_sql(query, history, limit)
+    def search(self, query: q.Query | None, history: bool, limit: int,
+               vlan: int | None = None) -> tuple[list[dict], bool]:
+        """(rows, truncated): at most LIMIT leases for QUERY, in VLAN."""
+        sql, values = search_sql(query, history, limit, vlan)
         rows = self._rows(sql, values)
         return rows[:limit], len(rows) > limit
 

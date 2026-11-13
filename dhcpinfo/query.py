@@ -2,8 +2,8 @@
 """What somebody typed into the search box, understood.
 
 One box takes everything: an address, a network, a hardware address (in
-any of the usual spellings, or the beginning of one), or part of a host
-name. This module only decides which it is - it knows nothing about the
+any of the usual spellings, or the beginning of one), a VLAN ("vlan 10"),
+or part of a host name. Any search can also be narrowed to one VLAN. This module only decides which it is - it knows nothing about the
 web or the database, so it can be tested on its own.
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ NET = 'net'               # every address in a network
 MAC = 'mac'               # one hardware address
 MAC_PREFIX = 'mac_prefix'  # hardware addresses that start like this
 NAME = 'name'             # host names that contain this
+VLAN = 'vlan'             # everybody in a VLAN
 
 KINDS = {
     IP: 'address',
@@ -24,11 +25,14 @@ KINDS = {
     MAC: 'hardware address',
     MAC_PREFIX: 'hardware addresses starting with',
     NAME: 'host names containing',
+    VLAN: 'VLAN',
 }
 
 _HEX12 = re.compile(r'^[0-9a-f]{12}$')
 # the beginning of a hardware address, written with separators: aa:bb:cc
 _PARTIAL = re.compile(r'^[0-9a-f]{2}([:-][0-9a-f]{2}){2,4}[:-]?$')
+# "vlan 10", "vlan10", "vlan:10", "VLAN=10"
+_VLAN = re.compile(r'^vlan\s*[:=]?\s*(\d+)$')
 MAX_LENGTH = 100
 
 
@@ -56,6 +60,9 @@ def parse(text: str | None) -> Query | None:
         raise Unusable('That is too long to search for.')
     low = text.lower()
 
+    vlan = _VLAN.match(low)
+    if vlan:
+        return Query(VLAN, str(parse_vlan(vlan.group(1))), text)
     if '/' in low:
         try:
             net = ipaddress.ip_network(low, strict=False)
@@ -78,6 +85,17 @@ def parse(text: str | None) -> Query | None:
     if len(text) < 2:
         raise Unusable('Give at least two characters of a host name.')
     return Query(NAME, text, text)
+
+
+def parse_vlan(text: str | None) -> int | None:
+    """The VLAN number in TEXT (the filter next to the search box);
+    None when there is none."""
+    text = (text or '').strip()
+    if not text:
+        return None
+    if not text.isdigit() or not 1 <= int(text) <= 4094:
+        raise Unusable('A VLAN is a number from 1 to 4094.')
+    return int(text)
 
 
 def _mac_shaped(low: str) -> bool:

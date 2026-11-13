@@ -46,9 +46,9 @@ def db():
     database.close()
 
 
-def find(db, text, history=False, limit=500):
+def find(db, text, history=False, limit=500, vlan=None):
     from dhcpinfo import query
-    rows, truncated = db.search(query.parse(text), history, limit)
+    rows, truncated = db.search(query.parse(text), history, limit, vlan)
     return [(r['ip'], r['mac'], r['hostname'], r['active']) for r in rows], truncated
 
 
@@ -70,6 +70,18 @@ def test_a_client_a_vendor_a_name_a_network(db):
     # a name's own % and _ are searched for, not obeyed
     assert find(db, '100%', history=True)[0][0][2] == 'phone_100%'
     assert find(db, 'phone%100', history=True)[0] == []
+
+
+def test_vlans(db):
+    # a VLAN typed into the box
+    assert {r[0] for r in find(db, 'vlan 10')[0]} == {'192.0.2.57'}
+    assert {r[0] for r in find(db, 'vlan 10', history=True)[0]} == {'192.0.2.57', '192.0.2.58'}
+    # the filter narrowing another search: the client is in two VLANs
+    assert {r[0] for r in find(db, '0000.5e00.5302')[0]} == {'192.0.2.57', '198.51.100.9'}
+    assert {r[0] for r in find(db, '0000.5e00.5302', vlan=20)[0]} == {'198.51.100.9'}
+    # the filter alone
+    assert {r[0] for r in find(db, '', vlan=20)[0]} == {'198.51.100.9'}
+    assert find(db, '', vlan=999)[0] == []
 
 
 def test_the_limit(db):
